@@ -3,6 +3,7 @@
 [![macOS](https://img.shields.io/badge/macOS-13.0+-blue.svg)](https://www.apple.com/macos)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Build and Release](https://github.com/OpenSystemsFoundation/szwitch/actions/workflows/release.yml/badge.svg)](https://github.com/OpenSystemsFoundation/szwitch/actions/workflows/release.yml)
 
 A lightweight macOS menu bar app to switch between multiple GitHub accounts seamlessly.
 
@@ -27,12 +28,31 @@ If you don't have Homebrew, install it from [brew.sh](https://brew.sh).
 
 ## Installation
 
-1. **Build the App**:
+### Option 1: Download Release (Recommended)
+
+1. Go to [Releases](https://github.com/OpenSystemsFoundation/szwitch/releases)
+2. Download the latest `Szwitch-{version}.dmg`
+3. Open the DMG and drag Szwitch to Applications
+4. Launch from Applications or Spotlight
+
+### Option 2: Build from Source
+
+1. Clone the repository:
    ```bash
+   git clone https://github.com/OpenSystemsFoundation/szwitch.git
+   cd szwitch
+   ```
+
+2. Generate icons and build:
+   ```bash
+   swift scripts/create_icon.swift
    ./scripts/build_app.sh
    ```
-2. **Run**:
-   Open `Szwitch.app` in the current directory.
+
+3. Run:
+   ```bash
+   open Szwitch.app
+   ```
 
 ## Usage
 

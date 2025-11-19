@@ -45,3 +45,6 @@ secrets.swift
 # Generated icons (can be recreated with scripts/create_icon.swift)
 AppIcon.iconset/
 AppIcon.icns
+
+# Distribution files
+dist/

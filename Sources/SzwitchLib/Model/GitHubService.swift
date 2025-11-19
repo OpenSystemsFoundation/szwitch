@@ -203,19 +203,76 @@ public struct RealGitHubService: GitHubServiceProtocol {
     }
     
     public func switchAccount(token: String, hostname: String = "github.com") async throws {
-        // First logout current account
-        do {
-            try await logout(hostname: hostname)
-        } catch {
-            // Ignore logout errors - might not be logged in
-            print("Logout error (ignoring): \(error)")
+        guard let ghPath = RealGitHubService.ghPath else {
+            throw GitHubError.notInstalled
         }
         
-        // Login with new token
-        try await login(token: token, hostname: hostname)
+        // First, try to get the username for this token
+        // We need to check if this account already exists in gh
+        let tokenData = token.data(using: .utf8)!
+        
+        // Try to get username by temporarily authenticating
+        // gh stores multiple accounts, so we should check if account exists first
+        let output = try await RealGitHubService.run(
+            ["auth", "status", "--hostname", hostname],
+            executable: ghPath
+        )
+        
+        // Parse all logged in accounts
+        // Look for: "✓ Logged in to github.com account USERNAME"
+        let accounts = output.components(separatedBy: "\n")
+            .filter { $0.contains("Logged in to \(hostname) account") }
+            .compactMap { line -> String? in
+                if let range = line.range(of: "account ([^ ]+)", options: .regularExpression),
+                   let match = line[range].firstMatch(of: /account ([^ ]+)/) {
+                    return String(match.1)
+                }
+                return nil
+            }
+        
+        print("Found accounts: \(accounts)")
+        
+        // Get username for the provided token by calling GitHub API with it
+        let username = try await fetchUsernameFromToken(token: token, hostname: hostname)
+        print("Token belongs to: \(username)")
+        
+        // Check if this account is already logged in
+        if accounts.contains(username) {
+            print("Account \(username) already exists, switching to it")
+            // Use gh auth switch
+            _ = try await RealGitHubService.run(
+                ["auth", "switch", "--hostname", hostname, "--user", username],
+                executable: ghPath
+            )
+        } else {
+            print("Account \(username) doesn't exist, logging in")
+            // Login with new token
+            try await login(token: token, hostname: hostname)
+        }
         
         // Setup git credential helper
         try await setupGit()
+    }
+    
+    private func fetchUsernameFromToken(token: String, hostname: String = "github.com") async throws -> String {
+        // Make a direct API call with the token to get the username
+        let url = URL(string: "https://api.\(hostname)/user")!
+        var request = URLRequest(url: url)
+        request.setValue("token \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw GitHubError.commandFailed("Failed to fetch user info from token")
+        }
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let username = json["login"] as? String else {
+            throw GitHubError.commandFailed("Failed to parse username from API response")
+        }
+        
+        return username
     }
     
     public func fetchUserInfo(hostname: String = "github.com") async throws -> (username: String, avatarUrl: String?) {
