@@ -209,7 +209,6 @@ public struct RealGitHubService: GitHubServiceProtocol {
         
         // First, try to get the username for this token
         // We need to check if this account already exists in gh
-        let tokenData = token.data(using: .utf8)!
         
         // Try to get username by temporarily authenticating
         // gh stores multiple accounts, so we should check if account exists first

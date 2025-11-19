@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct AddProfileView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss: DismissAction
     @EnvironmentObject var profileManager: ProfileManager
     
     @State private var name: String = ""

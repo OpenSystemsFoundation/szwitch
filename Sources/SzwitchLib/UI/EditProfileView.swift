@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct EditProfileView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss: DismissAction
     @EnvironmentObject var profileManager: ProfileManager
     
     let profile: GitProfile
