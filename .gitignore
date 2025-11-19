@@ -17,6 +17,9 @@ xcuserdata/
 Packages/
 Package.resolved
 
+# Built app
+Szwitch.app/
+
 # CocoaPods
 Pods/
 
