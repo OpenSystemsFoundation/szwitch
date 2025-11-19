@@ -4,11 +4,14 @@ public protocol GitHubServiceProtocol: Sendable {
     func isInstalled() -> Bool
     func install() async throws
     func login(token: String, hostname: String) async throws
+    func interactiveLogin(hostname: String, outputHandler: @escaping @Sendable (String) -> Void) async throws
     func logout(hostname: String) async throws
     func setupGit() async throws
     func getCurrentUser(hostname: String) async -> String?
     func switchAccount(token: String, hostname: String) async throws
     func getInstallationStatus() -> GitHubInstallStatus
+    func fetchUserInfo(hostname: String) async throws -> (username: String, avatarUrl: String?)
+    func getAuthToken(hostname: String) async throws -> String
 }
 
 public enum GitHubInstallStatus {
@@ -213,6 +216,100 @@ public struct RealGitHubService: GitHubServiceProtocol {
         
         // Setup git credential helper
         try await setupGit()
+    }
+    
+    public func fetchUserInfo(hostname: String = "github.com") async throws -> (username: String, avatarUrl: String?) {
+        guard let ghPath = RealGitHubService.ghPath else {
+            throw GitHubError.notInstalled
+        }
+        
+        // Use gh api to call the GitHub API
+        let output = try await RealGitHubService.run(
+            ["api", "user", "--hostname", hostname],
+            executable: ghPath
+        )
+        
+        // Parse JSON response
+        guard let data = output.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let username = json["login"] as? String else {
+            throw GitHubError.commandFailed("Failed to parse user info")
+        }
+        
+        let avatarUrl = json["avatar_url"] as? String
+        return (username: username, avatarUrl: avatarUrl)
+    }
+    
+    public func interactiveLogin(hostname: String = "github.com", outputHandler: @escaping @Sendable (String) -> Void) async throws {
+        guard let ghPath = RealGitHubService.ghPath else {
+            throw GitHubError.notInstalled
+        }
+        
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let process = Process()
+                    process.executableURL = URL(fileURLWithPath: ghPath)
+                    process.arguments = ["auth", "login", "--hostname", hostname, "--web"]
+                    
+                    let outputPipe = Pipe()
+                    let errorPipe = Pipe()
+                    
+                    process.standardOutput = outputPipe
+                    process.standardError = errorPipe
+                    
+                    // Stream output in real-time
+                    outputPipe.fileHandleForReading.readabilityHandler = { handle in
+                        let data = handle.availableData
+                        if !data.isEmpty, let str = String(data: data, encoding: .utf8) {
+                            outputHandler(str)
+                        }
+                    }
+                    
+                    errorPipe.fileHandleForReading.readabilityHandler = { handle in
+                        let data = handle.availableData
+                        if !data.isEmpty, let str = String(data: data, encoding: .utf8) {
+                            outputHandler(str)
+                        }
+                    }
+                    
+                    try process.run()
+                    process.waitUntilExit()
+                    
+                    // Clean up handlers
+                    outputPipe.fileHandleForReading.readabilityHandler = nil
+                    errorPipe.fileHandleForReading.readabilityHandler = nil
+                    
+                    if process.terminationStatus != 0 {
+                        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                        let errorMessage = String(data: errorData, encoding: .utf8) ?? "Authentication failed"
+                        continuation.resume(throwing: GitHubError.commandFailed(errorMessage))
+                    } else {
+                        continuation.resume(returning: ())
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+    
+    public func getAuthToken(hostname: String = "github.com") async throws -> String {
+        guard let ghPath = RealGitHubService.ghPath else {
+            throw GitHubError.notInstalled
+        }
+        
+        let output = try await RealGitHubService.run(
+            ["auth", "token", "--hostname", hostname],
+            executable: ghPath
+        )
+        
+        let token = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else {
+            throw GitHubError.commandFailed("No authentication token found")
+        }
+        
+        return token
     }
 }
 

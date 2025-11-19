@@ -1,13 +1,29 @@
 # Szwitch
 
+[![macOS](https://img.shields.io/badge/macOS-13.0+-blue.svg)](https://www.apple.com/macos)
+[![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 A lightweight macOS menu bar app to switch between multiple GitHub accounts seamlessly.
 
-## Features
-- **Menu Bar Interface**: Always accessible.
-- **Multiple Profiles**: Add as many GitHub accounts as you need.
-- **OAuth Support**: Secure login via GitHub Device Flow.
-- **Git Config Switching**: Automatically updates `user.name` and `user.email`.
-- **Keychain Integration**: Updates your system Keychain so `git push` just works.
+## ✨ Features
+
+- 🎯 **Menu Bar Interface**: Always accessible from your menu bar
+- 👥 **Multiple Profiles**: Manage unlimited GitHub accounts
+- 🔐 **GitHub CLI Integration**: Secure authentication via `gh` CLI
+- ⚙️ **Git Config Switching**: Automatically updates `user.name` and `user.email`
+- 🔄 **Seamless Switching**: One-click profile switching with visual feedback
+- 📊 **CLI Output View**: Real-time authentication feedback
+
+## Prerequisites
+
+**GitHub CLI (`gh`) must be installed:**
+
+```bash
+brew install gh
+```
+
+If you don't have Homebrew, install it from [brew.sh](https://brew.sh).
 
 ## Installation
 
@@ -18,25 +34,13 @@ A lightweight macOS menu bar app to switch between multiple GitHub accounts seam
 2. **Run**:
    Open `Szwitch.app` in the current directory.
 
-## Setup (Important!)
-
-To use the OAuth login, you need a **Client ID**. Since this is a custom open-source tool, you must register your own "App" on GitHub once:
-
-1. Go to [GitHub Developer Settings > OAuth Apps](https://github.com/settings/developers).
-2. Click **New OAuth App**.
-3. Fill in:
-   - **Application Name**: Szwitch (or anything)
-   - **Homepage URL**: `http://localhost`
-   - **Authorization callback URL**: `http://localhost`
-4. Click **Register application**.
-5. Copy the **Client ID** (e.g., `Iv1.8a...`).
-6. Open **Szwitch**, click "Add Account", and paste the Client ID.
-
 ## Usage
 
 1. Click the menu bar icon (person circle).
 2. Click **+** to add a profile.
-3. Login with GitHub.
+3. When prompted, authenticate via `gh auth login` in your terminal.
 4. Enter your Name and Email (for git config).
 5. Click **Save**.
 6. Click any profile in the list to switch to it.
+
+The app will automatically switch your git configuration and GitHub CLI authentication when you select a profile.

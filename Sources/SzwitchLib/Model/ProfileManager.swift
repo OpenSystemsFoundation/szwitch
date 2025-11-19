@@ -94,8 +94,7 @@ public class ProfileManager: ObservableObject {
                 var updatedProfile = profile
                 if updatedProfile.githubUsername == nil && !updatedProfile.token.isEmpty {
                     do {
-                        let oauthManager = OAuthManager()
-                        let (username, avatarUrl) = try await oauthManager.fetchGitHubUser(token: updatedProfile.token)
+                        let (username, avatarUrl) = try await githubService.fetchUserInfo(hostname: "github.com")
                         updatedProfile.githubUsername = username
                         updatedProfile.avatarUrl = avatarUrl
                         

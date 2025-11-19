@@ -29,17 +29,27 @@ cat > "$CONTENTS_DIR/Info.plist" <<EOF
     <key>CFBundleExecutable</key>
     <string>$APP_NAME</string>
     <key>CFBundleIdentifier</key>
-    <string>com.jeffkroon.szwitch</string>
+    <string>com.opensystemsfoundation.szwitch</string>
     <key>CFBundleName</key>
+    <string>$APP_NAME</string>
+    <key>CFBundleDisplayName</key>
     <string>$APP_NAME</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
     <key>LSUIElement</key>
     <true/>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2025 OpenSystemsFoundation. All rights reserved.</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
 </dict>
 </plist>
 EOF

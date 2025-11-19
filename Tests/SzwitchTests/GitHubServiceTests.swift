@@ -16,16 +16,14 @@ final class GitHubServiceTests: XCTestCase {
     // We cannot easily test install() or login() with RealGitHubService without side effects.
     // We should rely on manual verification for those, or refactor RealGitHubService to be more testable (injecting Process runner).
     
-    func testServiceProtocol() {
+    func testServiceProtocol() async throws {
         // Verify that we can create a mock conforming to the protocol
-        struct MockGitHubService: GitHubServiceProtocol {
-            func isInstalled() -> Bool { return true }
-            func install() async throws {}
-            func login(token: String) async throws {}
-            func setupGit() async throws {}
-        }
-        
         let mock = MockGitHubService()
         XCTAssertTrue(mock.isInstalled())
+        
+        // Test fetchUserInfo
+        let (username, avatarUrl) = try await mock.fetchUserInfo(hostname: "github.com")
+        XCTAssertEqual(username, "testuser")
+        XCTAssertEqual(avatarUrl, "https://avatars.githubusercontent.com/u/12345")
     }
 }

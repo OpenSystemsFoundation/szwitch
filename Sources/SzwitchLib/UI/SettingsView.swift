@@ -4,7 +4,6 @@ public struct SettingsView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @State private var showAddProfile = false
     @State private var editingProfile: GitProfile?
-    @AppStorage("GitHubClientID") private var clientId: String = ""
     
     public init() {}
     
@@ -114,38 +113,42 @@ public struct SettingsView: View {
                 GitHubCLIStatusView()
             }
             
-            Section("GitHub App Configuration") {
-                HStack {
-                    TextField("Client ID", text: $clientId)
-                    if !clientId.isEmpty {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
-                }
-                
-                Text("Saved automatically")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                
-                DisclosureGroup("How to get a Client ID") {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("1. Go to GitHub Settings > Developer settings > OAuth Apps.")
-                        Text("2. Click 'New OAuth App'.")
-                        Text("3. Set **Authorization callback URL** to: `http://localhost`")
-                        Text("4. **IMPORTANT**: Check **Enable Device Flow**.")
-                        Text("5. Register and copy the **Client ID** above.")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 4)
+            Section("How It Works") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Szwitch uses the GitHub CLI (gh) to manage authentication.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    Text("When you add a profile, you'll authenticate using 'gh auth login' which securely stores your credentials.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    Text("Switching profiles automatically updates your git config and GitHub CLI session.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             
             Section("About") {
-                Text("Szwitch v1.0")
-                Text("A lightweight GitHub account switcher.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "person.2.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(.blue)
+                        VStack(alignment: .leading) {
+                            Text("Szwitch")
+                                .font(.headline)
+                            Text("Version 1.0.0")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text("A lightweight macOS menu bar app for seamlessly switching between multiple GitHub accounts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .formStyle(.grouped)
