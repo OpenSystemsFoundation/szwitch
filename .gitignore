@@ -41,6 +41,7 @@ iOSInjectionProject/
 # Local configuration
 config.json
 secrets.swift
+.vscode/
 
 # Generated icons (can be recreated with scripts/create_icon.swift)
 AppIcon.iconset/
