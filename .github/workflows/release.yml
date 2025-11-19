@@ -22,10 +22,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0"
+      - name: Show build environment
+        run: |
+          xcode-select -p
+          swift --version
+          xcodebuild -version
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -scheme Szwitch \
+            -destination 'platform=macOS' \
+            -enableCodeCoverage YES \
+            OTHER_SWIFT_FLAGS="-Xfrontend -disable-round-trip-debug-types"
 
       - name: Generate version from date
         id: version

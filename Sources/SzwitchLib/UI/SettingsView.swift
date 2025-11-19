@@ -4,16 +4,16 @@ public struct SettingsView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @State private var showAddProfile = false
     @State private var editingProfile: GitProfile?
-    
+
     public init() {}
-    
+
     public var body: some View {
         TabView {
             profilesTab
                 .tabItem {
                     Label("Profiles", systemImage: "person.2")
                 }
-            
+
             generalTab
                 .tabItem {
                     Label("General", systemImage: "gear")
@@ -27,11 +27,11 @@ public struct SettingsView: View {
             EditProfileView(profile: profile)
         }
     }
-    
+
     var profilesTab: some View {
         VStack(spacing: 0) {
             GitHubCLIWarningBanner()
-            
+
             if profileManager.profiles.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "person.crop.circle.badge.questionmark")
@@ -41,7 +41,7 @@ public struct SettingsView: View {
                         .font(.title2)
                     Text("Add a GitHub account to get started.")
                         .foregroundStyle(.secondary)
-                    
+
                     Button("Add Account") {
                         showAddProfile = true
                     }
@@ -60,9 +60,9 @@ public struct SettingsView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
-                            
+
                             Spacer()
-                            
+
                             if profileManager.activeProfileId == profile.id {
                                 Text("Active")
                                     .font(.caption)
@@ -71,7 +71,7 @@ public struct SettingsView: View {
                                     .foregroundStyle(.green)
                                     .cornerRadius(4)
                             }
-                            
+
                             Button("Edit") {
                                 editingProfile = profile
                             }
@@ -106,34 +106,38 @@ public struct SettingsView: View {
             }
         }
     }
-    
+
     var generalTab: some View {
         Form {
             Section("Startup") {
                 LaunchAtLoginToggle()
             }
-            
+
             Section("GitHub CLI Status") {
                 GitHubCLIStatusView()
             }
-            
+
             Section("How It Works") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Szwitch uses the GitHub CLI (gh) to manage authentication.")
                         .fixedSize(horizontal: false, vertical: true)
-                    
-                    Text("When you add a profile, you'll authenticate using 'gh auth login' which securely stores your credentials.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    Text("Switching profiles automatically updates your git config and GitHub CLI session.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(
+                        "When you add a profile, you'll authenticate using 'gh auth login' which securely stores your credentials."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                    Text(
+                        "Switching profiles automatically updates your git config and GitHub CLI session."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            
+
             Section("About") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -148,10 +152,12 @@ public struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Text("A lightweight macOS menu bar app for seamlessly switching between multiple GitHub accounts.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text(
+                        "A lightweight macOS menu bar app for seamlessly switching between multiple GitHub accounts."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

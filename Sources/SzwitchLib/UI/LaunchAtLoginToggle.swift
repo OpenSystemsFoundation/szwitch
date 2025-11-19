@@ -3,7 +3,7 @@ import SwiftUI
 struct LaunchAtLoginToggle: View {
     @State private var isEnabled = false
     @State private var errorMessage: String?
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Toggle("Launch at Login", isOn: $isEnabled)
@@ -17,11 +17,11 @@ struct LaunchAtLoginToggle: View {
                         errorMessage = error.localizedDescription
                     }
                 }
-            
+
             Text("Automatically start Szwitch when you log in")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            
+
             if let error = errorMessage {
                 Text(error)
                     .font(.caption)
