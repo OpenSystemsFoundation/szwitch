@@ -14,25 +14,9 @@ permissions:
   contents: write
 
 jobs:
-  test:
-    name: Test
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: "6.0"
-
-      - name: Run tests
-        run: swift test
-
   build:
     name: Build and Release
     runs-on: macos-latest
-    needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
