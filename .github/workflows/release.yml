@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - main
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Swift
         uses: swift-actions/setup-swift@v2
         with:
-          swift-version: '6.0'
+          swift-version: "6.0"
 
       - name: Run tests
         run: swift test
@@ -41,7 +41,7 @@ jobs:
       - name: Setup Swift
         uses: swift-actions/setup-swift@v2
         with:
-          swift-version: '6.0'
+          swift-version: "6.0"
 
       - name: Generate version from date
         id: version
@@ -62,12 +62,12 @@ jobs:
           mkdir -p "$DMG_TEMP"
           cp -R Szwitch.app "$DMG_TEMP/"
           ln -s /Applications "$DMG_TEMP/Applications"
-          
+
           hdiutil create -volname "Szwitch" \
             -srcfolder "$DMG_TEMP" \
             -ov -format UDZO \
             "Szwitch-${{ steps.version.outputs.VERSION }}.dmg"
-          
+
           rm -rf "$DMG_TEMP"
 
       - name: Create ZIP
@@ -86,26 +86,26 @@ jobs:
           name: Szwitch v${{ steps.version.outputs.VERSION }}
           body: |
             ## 🎉 Automated Release
-            
+
             **Version:** ${{ steps.version.outputs.VERSION }}
             **Commit:** ${{ github.sha }}
-            
+
             ### 📦 Installation
-            
+
             1. Download `Szwitch-${{ steps.version.outputs.VERSION }}.dmg`
             2. Open the DMG file
             3. Drag Szwitch to Applications
             4. Launch from Applications or Spotlight
-            
+
             ### ✅ Verification
-            
+
             Verify the download with the provided `.sha256` checksums:
             ```bash
             shasum -a 256 -c Szwitch-${{ steps.version.outputs.VERSION }}.dmg.sha256
             ```
-            
+
             ### 📋 Changes
-            
+
             View the full diff: https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.VERSION }}^...v${{ steps.version.outputs.VERSION }}
           draft: false
           prerelease: false
