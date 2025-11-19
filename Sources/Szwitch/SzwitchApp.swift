@@ -9,24 +9,6 @@ struct SzwitchApp: App {
     var body: some Scene {
         Group {
             MenuBarExtra("Szwitch", systemImage: "person.2.circle") {
-                // Current Profile Status
-                if let activeProfile = profileManager.profiles.first(where: { $0.id == profileManager.activeProfileId }) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Active Profile")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                            Text(activeProfile.name)
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    
-                    Divider()
-                }
-                
                 // Profile List
                 ForEach(profileManager.profiles) { profile in
                     Button(action: {
@@ -63,13 +45,6 @@ struct SzwitchApp: App {
                     Label("Settings", systemImage: "gear")
                 }
                 .keyboardShortcut(",", modifiers: .command)
-                
-                Button(action: {
-                    openWindow(id: "about")
-                    NSApplication.shared.activate(ignoringOtherApps: true)
-                }) {
-                    Label("About Szwitch", systemImage: "info.circle")
-                }
                 
                 Divider()
                 

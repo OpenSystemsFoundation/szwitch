@@ -19,6 +19,11 @@ mkdir -p "$RESOURCES_DIR"
 # Copy binary
 cp "$BUILD_DIR/$APP_NAME" "$MACOS_DIR/"
 
+# Copy icon if it exists
+if [ -f "AppIcon.icns" ]; then
+    cp "AppIcon.icns" "$RESOURCES_DIR/"
+fi
+
 # Create Info.plist
 # LSUIElement=1 makes it an agent app (no dock icon)
 cat > "$CONTENTS_DIR/Info.plist" <<EOF
@@ -50,6 +55,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<EOF
     <string>6.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.developer-tools</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
 </dict>
 </plist>
 EOF
