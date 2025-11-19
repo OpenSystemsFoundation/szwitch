@@ -109,6 +109,10 @@ public struct SettingsView: View {
     
     var generalTab: some View {
         Form {
+            Section("Startup") {
+                LaunchAtLoginToggle()
+            }
+            
             Section("GitHub CLI Status") {
                 GitHubCLIStatusView()
             }

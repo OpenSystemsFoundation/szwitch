@@ -3,7 +3,7 @@ import SwiftUI
 public struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
     @EnvironmentObject var profileManager: ProfileManager
-    
+
     let profile: GitProfile
     @State private var name: String
     @State private var email: String
@@ -15,7 +15,7 @@ public struct EditProfileView: View {
     @State private var authError: String?
     @State private var cliOutput: String = ""
     @State private var showCLIOutput = false
-    
+
     public init(profile: GitProfile) {
         self.profile = profile
         _name = State(initialValue: profile.name)
@@ -24,7 +24,7 @@ public struct EditProfileView: View {
         _githubUsername = State(initialValue: profile.githubUsername)
         _avatarUrl = State(initialValue: profile.avatarUrl)
     }
-    
+
     public var body: some View {
         VStack(spacing: 0) {
             // Header with top padding
@@ -33,7 +33,7 @@ public struct EditProfileView: View {
                 .fontWeight(.semibold)
                 .padding(.top, 24)
                 .padding(.bottom, 16)
-            
+
             Form {
                 Section("Profile Details") {
                     TextField("Name", text: $name)
@@ -41,7 +41,7 @@ public struct EditProfileView: View {
                     TextField("Email", text: $email)
                         .disabled(isAuthenticating)
                 }
-                
+
                 Section("GitHub Authentication") {
                     if !token.isEmpty {
                         HStack {
@@ -66,7 +66,7 @@ public struct EditProfileView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("No GitHub account linked")
                                 .foregroundStyle(.secondary)
-                            
+
                             if isAuthenticating {
                                 HStack {
                                     ProgressView()
@@ -82,21 +82,21 @@ public struct EditProfileView: View {
                                     }
                                 }
                                 .buttonStyle(.bordered)
-                                
+
                                 if let error = authError {
                                     Text(error)
                                         .font(.caption)
                                         .foregroundStyle(.red)
                                 }
                             }
-                            
+
                             Text("GitHub CLI will open your browser to authenticate securely.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    
+
                     // CLI Output Section
                     if showCLIOutput {
                         VStack(alignment: .leading, spacing: 4) {
@@ -105,19 +105,22 @@ public struct EditProfileView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Spacer()
-                                Button(action: { cliOutput = ""; showCLIOutput = false }) {
+                                Button(action: {
+                                    cliOutput = ""
+                                    showCLIOutput = false
+                                }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
                             }
-                            
+
                             CLIOutputView(output: cliOutput)
                                 .frame(height: 120)
                         }
                     }
                 }
-                
+
                 Section {
                     Button("Delete Profile", role: .destructive) {
                         showingDeleteConfirmation = true
@@ -126,15 +129,15 @@ public struct EditProfileView: View {
                 }
             }
             .formStyle(.grouped)
-            
+
             HStack {
                 Button("Cancel") {
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
-                
+
                 Spacer()
-                
+
                 Button("Save Changes") {
                     saveChanges()
                 }
@@ -150,47 +153,48 @@ public struct EditProfileView: View {
                 profileManager.removeProfile(id: profile.id)
                 dismiss()
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Are you sure you want to delete this profile? This action cannot be undone.")
         }
     }
-    
+
     private func authenticateWithGitHubCLI() {
         isAuthenticating = true
         authError = nil
         showCLIOutput = true
         cliOutput = "Starting GitHub authentication...\n"
-        
+
         Task {
             do {
                 let githubService = RealGitHubService()
-                
+
                 cliOutput += "Running: gh auth login --hostname github.com --web\n"
                 cliOutput += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                
+
                 // Run gh auth login with web authentication
                 try await githubService.interactiveLogin(hostname: "github.com") { output in
                     Task { @MainActor in
                         cliOutput += output
                     }
                 }
-                
+
                 // Give it a moment to complete
                 try await Task.sleep(nanoseconds: 500_000_000)
-                
+
                 cliOutput += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 cliOutput += "✓ Authentication successful!\n"
                 cliOutput += "Fetching user information...\n"
-                
+
                 // Fetch user info
-                let (username, avatar) = try await githubService.fetchUserInfo(hostname: "github.com")
-                
+                let (username, avatar) = try await githubService.fetchUserInfo(
+                    hostname: "github.com")
+
                 cliOutput += "✓ Logged in as @\(username)\n"
-                
+
                 // Get the auth token
                 let authToken = try await githubService.getAuthToken(hostname: "github.com")
-                
+
                 await MainActor.run {
                     token = authToken
                     githubUsername = username
@@ -207,7 +211,7 @@ public struct EditProfileView: View {
             }
         }
     }
-    
+
     private func saveChanges() {
         var updatedProfile = GitProfile(
             id: profile.id,
