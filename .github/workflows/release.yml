@@ -30,11 +30,10 @@ jobs:
 
       - name: Run tests
         run: |
-          xcodebuild test \
-            -scheme Szwitch \
-            -destination 'platform=macOS' \
-            -enableCodeCoverage YES \
-            OTHER_SWIFT_FLAGS="-Xfrontend -disable-round-trip-debug-types"
+          swift test \
+            -Xswiftc -Xfrontend \
+            -Xswiftc -disable-round-trip-debug-types \
+            --enable-code-coverage
 
       - name: Generate version from date
         id: version

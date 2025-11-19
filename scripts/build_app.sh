@@ -9,17 +9,10 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
 echo "Building $APP_NAME..."
-# Use xcodebuild for better Xcode integration
-# Add flags to work around Swift 6.0 compiler crash with debug types
-xcodebuild build \
-  -scheme Szwitch \
-  -configuration Release \
-  -derivedDataPath .build \
-  OTHER_SWIFT_FLAGS="-Xfrontend -disable-round-trip-debug-types"
-
-# Move the built binary to the expected location
-mkdir -p "$BUILD_DIR"
-cp -f ".build/Build/Products/Release/Szwitch" "$BUILD_DIR/"
+# Add -Xswiftc flags to work around Swift 6.0 compiler crash with debug types
+swift build -c release \
+  -Xswiftc -Xfrontend \
+  -Xswiftc -disable-round-trip-debug-types
 
 echo "Creating App Bundle..."
 rm -rf "$APP_BUNDLE"
