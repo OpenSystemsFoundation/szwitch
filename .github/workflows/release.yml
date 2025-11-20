@@ -1,58 +1,82 @@
-name: Build and Release
+name: CI/CD
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
-    tags:
-      - "v*"
-  workflow_dispatch:  # Allow manual triggering
+    branches:
+      - main
+      - dev
 
 permissions:
   contents: write
 
 jobs:
   test:
-    name: Run Tests
+    name: Test
     runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Show build environment
         run: |
           xcode-select -p
           swift --version
 
+      - name: Build and check for warnings
+        run: swift build --build-tests 2>&1 | tee build.log
+
       - name: Run tests
         run: swift test
 
-  build:
+      - name: Check code compiles without warnings
+        run: '! grep -q "warning:" build.log'
+
+  release:
     name: Build and Release
     runs-on: macos-latest
     needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next version
+        id: version
+        run: |
+          # Get the latest tag, default to v1.0.0 if no tags exist
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing tags found, starting with v1.0.0"
+            NEW_VERSION="1.0.0"
+          else
+            echo "Latest tag: $LATEST_TAG"
+            # Remove 'v' prefix and split into major.minor.patch
+            VERSION=${LATEST_TAG#v}
+            MAJOR=$(echo $VERSION | cut -d. -f1)
+            MINOR=$(echo $VERSION | cut -d. -f2)
+            PATCH=$(echo $VERSION | cut -d. -f3)
+
+            # Increment patch version
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          fi
+
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Next version will be: v$NEW_VERSION"
 
       - name: Show build environment
         run: |
           xcode-select -p
           swift --version
           xcodebuild -version
-
-      - name: Extract version from tag
-        id: version
-        run: |
-          # Validate that this is running from a tag push
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            # Remove 'v' prefix from tag name (e.g., v1.0.0 -> 1.0.0)
-            VERSION=${GITHUB_REF#refs/tags/v}
-            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-            echo "Extracted version: $VERSION"
-          else
-            echo "Error: This workflow should only run on tag pushes"
-            echo "GITHUB_REF: ${GITHUB_REF}"
-            exit 1
-          fi
 
       - name: Generate icons
         run: |
