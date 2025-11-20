@@ -9,6 +9,7 @@ final class ProfileManagerTests: XCTestCase {
     var mockGitService: MockGitService!
     var mockUserDefaults: UserDefaults!
 
+    @MainActor
     override func setUp() {
         super.setUp()
         // Use mock keychain to avoid hitting real keychain and ensure isolation
@@ -24,6 +25,7 @@ final class ProfileManagerTests: XCTestCase {
         profileManager = ProfileManager(gitService: mockGitService, userDefaults: mockUserDefaults)
     }
 
+    @MainActor
     override func tearDown() {
         // Clean up
         mockUserDefaults.removePersistentDomain(forName: "TestDefaults")
