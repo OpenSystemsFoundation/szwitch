@@ -1,0 +1,51 @@
+# Xcode
+.DS_Store
+*/.DS_Store
+*.swp
+*.lock
+*~.nib
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+project.xcworkspace/
+xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# Built app
+Szwitch.app/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Code Injection
+iOSInjectionProject/
+
+# Playground
+*.playground
+
+# Local configuration
+config.json
+secrets.swift
+.vscode/
+
+# Generated icons (can be recreated with scripts/create_icon.swift)
+AppIcon.iconset/
+AppIcon.icns
+
+# Distribution files
+dist/
