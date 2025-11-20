@@ -2,22 +2,33 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:  # Allow manual triggering
 
 permissions:
   contents: write
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show build environment
+        run: |
+          xcode-select -p
+          swift --version
+
+      - name: Run tests
+        run: swift test
+
   build:
     name: Build and Release
     runs-on: macos-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,12 +39,20 @@ jobs:
           swift --version
           xcodebuild -version
 
-      - name: Generate version from date
+      - name: Extract version from tag
         id: version
         run: |
-          VERSION=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Generated version: $VERSION"
+          # Validate that this is running from a tag push
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            # Remove 'v' prefix from tag name (e.g., v1.0.0 -> 1.0.0)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          else
+            echo "Error: This workflow should only run on tag pushes"
+            echo "GITHUB_REF: ${GITHUB_REF}"
+            exit 1
+          fi
 
       - name: Generate icons
         run: |

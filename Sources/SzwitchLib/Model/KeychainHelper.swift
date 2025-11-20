@@ -111,23 +111,48 @@ public final class RealKeychainBackend: KeychainBackend {
     }
 }
 
+/// Provides thread-safe access to keychain storage operations.
+///
+/// KeychainHelper is a singleton that wraps keychain operations and allows for backend
+/// swapping (primarily for testing). The backend property is protected by NSLock to
+/// ensure thread-safe access.
+///
+/// - Note: Thread Safety Limitation
+/// The lock only protects access to the backend property itself. Once a backend reference
+/// is obtained, subsequent operations on that backend are not protected by the lock.
+/// This is acceptable for this use case because:
+/// 1. Backend swapping only occurs during test setup
+/// 2. The real KeychainBackend uses the system keychain which is thread-safe
+/// 3. Race conditions would only occur during test backend swaps, not production use
 public final class KeychainHelper: Sendable {
     public static let shared = KeychainHelper()
-    
-    // Allow swapping backend for testing
-    // Using a lock or actor would be better for thread safety if this changes at runtime often,
-    // but for testing injection it's usually acceptable.
-    // Since this is a singleton used from MainActor often, but defined as Sendable,
-    // we should make this thread-safe or just UnsafeMutable for tests.
-    // For simplicity in this context, we'll use a property that can be set.
-    // To be strictly Sendable, we wrap it.
-    
+
+    // Thread-safe backend storage using NSLock
     private let backendContainer = BackendContainer()
-    
+
     private final class BackendContainer: @unchecked Sendable {
-        var backend: any KeychainBackend = RealKeychainBackend()
+        private let lock = NSLock()
+        private var _backend: any KeychainBackend = RealKeychainBackend()
+
+        /// Thread-safe access to the keychain backend.
+        ///
+        /// The lock protects access to the _backend property but not operations
+        /// performed on the returned backend reference. See KeychainHelper
+        /// documentation for thread safety limitations.
+        var backend: any KeychainBackend {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return _backend
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                _backend = newValue
+            }
+        }
     }
-    
+
     public var backend: any KeychainBackend {
         get { backendContainer.backend }
         set { backendContainer.backend = newValue }
