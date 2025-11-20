@@ -64,4 +64,22 @@ cat > "$CONTENTS_DIR/Info.plist" <<EOF
 </plist>
 EOF
 
+echo "Signing app with ad-hoc signature..."
+# Ad-hoc signing (use Developer ID if available, otherwise ad-hoc)
+if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
+    echo "Found Developer ID certificate, using it..."
+    codesign --force --deep --sign "Developer ID Application" \
+        --entitlements "Szwitch.entitlements" \
+        --options runtime \
+        "$APP_BUNDLE"
+else
+    echo "No Developer ID found, using ad-hoc signature..."
+    codesign --force --deep --sign - \
+        --entitlements "Szwitch.entitlements" \
+        "$APP_BUNDLE"
+fi
+
+echo "Verifying signature..."
+codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE" 2>&1 || true
+
 echo "Done! App created at $APP_BUNDLE"

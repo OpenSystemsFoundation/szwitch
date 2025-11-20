@@ -126,7 +126,29 @@ jobs:
             1. Download `Szwitch-${{ steps.version.outputs.VERSION }}.dmg`
             2. Open the DMG file
             3. Drag Szwitch to Applications
-            4. Launch from Applications or Spotlight
+
+            ### ⚠️ First Launch: Bypassing Gatekeeper
+
+            Since Szwitch is not code-signed with an Apple Developer ID certificate, macOS will block it on first launch. **This is expected.**
+
+            **To open Szwitch:**
+
+            **Method 1 (Recommended):** Right-click → Open
+            1. In Applications, **right-click** Szwitch.app
+            2. Select **"Open"**
+            3. Click **"Open"** in the security dialog
+            4. After first time, opens normally
+
+            **Method 2:** System Settings
+            1. Try to open Szwitch (it will be blocked)
+            2. Go to **System Settings** → **Privacy & Security**
+            3. Click **"Open Anyway"** next to the Szwitch warning
+
+            **Method 3:** Terminal
+            ```bash
+            xattr -cr /Applications/Szwitch.app
+            open /Applications/Szwitch.app
+            ```
 
             ### ✅ Verification
 
