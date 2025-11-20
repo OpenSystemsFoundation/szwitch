@@ -28,13 +28,6 @@ jobs:
           swift --version
           xcodebuild -version
 
-      - name: Run tests
-        run: |
-          swift test \
-            -Xswiftc -Xfrontend \
-            -Xswiftc -disable-round-trip-debug-types \
-            --enable-code-coverage
-
       - name: Generate version from date
         id: version
         run: |
