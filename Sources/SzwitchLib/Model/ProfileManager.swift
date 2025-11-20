@@ -84,7 +84,10 @@ public class ProfileManager: ObservableObject {
         // Clear any previous errors
         lastError = nil
 
-        // Set active profile immediately
+        // Store previous profile for error recovery
+        let previousProfileId = activeProfileId
+
+        // Optimistically set active profile
         activeProfileId = profile.id
         userDefaults.set(profile.id.uuidString, forKey: activeProfileKey)
 
@@ -136,13 +139,20 @@ public class ProfileManager: ObservableObject {
                 logger.debug("Git operations are now authenticated as \(updatedProfile.name)")
             } catch {
                 logger.error("Failed to switch profile: \(error.localizedDescription)")
+
+                // Revert active profile on failure
+                activeProfileId = previousProfileId
+                if let prevId = previousProfileId {
+                    userDefaults.set(prevId.uuidString, forKey: activeProfileKey)
+                } else {
+                    userDefaults.removeObject(forKey: activeProfileKey)
+                }
+
                 // Set user-facing error message
-                await MainActor.run {
-                    if let githubError = error as? GitHubError {
-                        lastError = githubError.localizedDescription
-                    } else {
-                        lastError = "Failed to switch profile: \(error.localizedDescription)"
-                    }
+                if let githubError = error as? GitHubError {
+                    lastError = githubError.localizedDescription
+                } else {
+                    lastError = "Failed to switch profile: \(error.localizedDescription)"
                 }
             }
         }

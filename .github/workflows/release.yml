@@ -42,10 +42,17 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          # Remove 'v' prefix from tag name (e.g., v1.0.0 -> 1.0.0)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
+          # Validate that this is running from a tag push
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            # Remove 'v' prefix from tag name (e.g., v1.0.0 -> 1.0.0)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          else
+            echo "Error: This workflow should only run on tag pushes"
+            echo "GITHUB_REF: ${GITHUB_REF}"
+            exit 1
+          fi
 
       - name: Generate icons
         run: |
