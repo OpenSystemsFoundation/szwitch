@@ -1,17 +1,67 @@
 import Foundation
+import os.log
 
+/// Protocol for interacting with GitHub CLI and GitHub API.
+/// Provides methods for authentication, account management, and user information retrieval.
 public protocol GitHubServiceProtocol: Sendable {
+    /// Checks if GitHub CLI (gh) is installed on the system.
+    /// - Returns: `true` if gh is installed, `false` otherwise
     func isInstalled() -> Bool
+
+    /// Installs GitHub CLI using Homebrew.
+    /// - Throws: `GitHubError.brewNotFound` if Homebrew is not installed
     func install() async throws
+
+    /// Logs in to GitHub using a personal access token.
+    /// - Parameters:
+    ///   - token: The GitHub personal access token
+    ///   - hostname: The GitHub hostname (default: "github.com")
+    /// - Throws: `GitHubError.notInstalled` if gh is not installed
     func login(token: String, hostname: String) async throws
+
+    /// Performs interactive web-based login to GitHub.
+    /// - Parameters:
+    ///   - hostname: The GitHub hostname (default: "github.com")
+    ///   - outputHandler: Callback that receives real-time output from the login process
+    /// - Throws: `GitHubError.notInstalled` if gh is not installed
     func interactiveLogin(hostname: String, outputHandler: @escaping @Sendable (String) -> Void)
         async throws
+
+    /// Logs out from GitHub.
+    /// - Parameter hostname: The GitHub hostname (default: "github.com")
+    /// - Throws: `GitHubError.notInstalled` if gh is not installed
     func logout(hostname: String) async throws
+
+    /// Configures git to use GitHub CLI as the credential helper.
+    /// - Throws: `GitHubError.notInstalled` if gh is not installed
     func setupGit() async throws
+
+    /// Gets the currently authenticated GitHub username.
+    /// - Parameter hostname: The GitHub hostname (default: "github.com")
+    /// - Returns: The username if authenticated, `nil` otherwise
     func getCurrentUser(hostname: String) async -> String?
+
+    /// Switches to a different GitHub account using the provided token.
+    /// - Parameters:
+    ///   - token: The GitHub personal access token for the account
+    ///   - hostname: The GitHub hostname (default: "github.com")
+    /// - Throws: `GitHubError` if the switch fails
     func switchAccount(token: String, hostname: String) async throws
+
+    /// Gets the current installation status of GitHub CLI.
+    /// - Returns: The installation status
     func getInstallationStatus() -> GitHubInstallStatus
+
+    /// Fetches user information from GitHub API.
+    /// - Parameter hostname: The GitHub hostname (default: "github.com")
+    /// - Returns: A tuple containing the username and optional avatar URL
+    /// - Throws: `GitHubError` if the fetch fails
     func fetchUserInfo(hostname: String) async throws -> (username: String, avatarUrl: String?)
+
+    /// Gets the authentication token for the currently logged-in user.
+    /// - Parameter hostname: The GitHub hostname (default: "github.com")
+    /// - Returns: The authentication token
+    /// - Throws: `GitHubError` if no token is found
     func getAuthToken(hostname: String) async throws -> String
 }
 
@@ -22,69 +72,58 @@ public enum GitHubInstallStatus {
 }
 
 public struct RealGitHubService: GitHubServiceProtocol {
+    private let logger = Logger(subsystem: "com.szwitch", category: "GitHubService")
+
     public init() {}
 
-    public static let ghPath: String? = {
-        let paths = [
+    /// Helper function to find an executable in common paths or using `which`
+    private static func findExecutable(name: String, commonPaths: [String]) -> String? {
+        // First check common installation paths
+        if let found = commonPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
+            return found
+        }
+
+        // Fallback: try to find it in PATH using `which`
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = [name]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        try? process.run()
+        process.waitUntilExit()
+
+        if process.terminationStatus == 0 {
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(
+                in: .whitespacesAndNewlines),
+                !path.isEmpty
+            {
+                return path
+            }
+        }
+        return nil
+    }
+
+    public static let ghPath: String? = findExecutable(
+        name: "gh",
+        commonPaths: [
             "/opt/homebrew/bin/gh",
             "/usr/local/bin/gh",
             "/usr/bin/gh",
             "/bin/gh",
         ]
-        if let found = paths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            return found
-        }
-        // Fallback: try to find it in PATH using `which`
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = ["gh"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try? process.run()
-        process.waitUntilExit()
-        if process.terminationStatus == 0 {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(
-                in: .whitespacesAndNewlines),
-                !path.isEmpty
-            {
-                return path
-            }
-        }
-        return nil
-    }()
+    )
 
-    public static let brewPath: String? = {
-        let paths = [
+    public static let brewPath: String? = findExecutable(
+        name: "brew",
+        commonPaths: [
             "/opt/homebrew/bin/brew",
             "/usr/local/bin/brew",
             "/usr/bin/brew",
             "/bin/brew",
         ]
-        if let found = paths.first(where: { FileManager.default.fileExists(atPath: $0) }) {
-            return found
-        }
-        // Fallback: try to find it in PATH using `which`
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = ["brew"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        try? process.run()
-        process.waitUntilExit()
-        if process.terminationStatus == 0 {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(
-                in: .whitespacesAndNewlines),
-                !path.isEmpty
-            {
-                return path
-            }
-        }
-        return nil
-    }()
+    )
 
     private static func run(_ args: [String], executable: String, stdinData: Data? = nil)
         async throws -> String
@@ -161,7 +200,9 @@ public struct RealGitHubService: GitHubServiceProtocol {
             throw GitHubError.notInstalled
         }
 
-        let tokenData = token.data(using: .utf8)!
+        guard let tokenData = token.data(using: .utf8) else {
+            throw GitHubError.commandFailed("Invalid token encoding")
+        }
         _ = try await RealGitHubService.run(
             ["auth", "login", "--with-token", "--hostname", hostname],
             executable: ghPath,
@@ -240,22 +281,22 @@ public struct RealGitHubService: GitHubServiceProtocol {
                 return nil
             }
 
-        print("Found accounts: \(accounts)")
+        logger.debug("Found accounts: \(accounts)")
 
         // Get username for the provided token by calling GitHub API with it
         let username = try await fetchUsernameFromToken(token: token, hostname: hostname)
-        print("Token belongs to: \(username)")
+        logger.debug("Token belongs to: \(username)")
 
         // Check if this account is already logged in
         if accounts.contains(username) {
-            print("Account \(username) already exists, switching to it")
+            logger.info("Account \(username) already exists, switching to it")
             // Use gh auth switch
             _ = try await RealGitHubService.run(
                 ["auth", "switch", "--hostname", hostname, "--user", username],
                 executable: ghPath
             )
         } else {
-            print("Account \(username) doesn't exist, logging in")
+            logger.info("Account \(username) doesn't exist, logging in")
             // Login with new token
             try await login(token: token, hostname: hostname)
         }
@@ -268,22 +309,34 @@ public struct RealGitHubService: GitHubServiceProtocol {
         -> String
     {
         // Make a direct API call with the token to get the username
-        let url = URL(string: "https://api.\(hostname)/user")!
+        guard let url = URL(string: "https://api.\(hostname)/user") else {
+            throw GitHubError.commandFailed("Invalid GitHub API URL for hostname: \(hostname)")
+        }
         var request = URLRequest(url: url)
         request.setValue("token \(token)", forHTTPHeaderField: "Authorization")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-            httpResponse.statusCode == 200
-        else {
-            throw GitHubError.commandFailed("Failed to fetch user info from token")
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw GitHubError.commandFailed("Invalid response from GitHub API")
         }
 
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let username = json["login"] as? String
-        else {
-            throw GitHubError.commandFailed("Failed to parse username from API response")
+        guard httpResponse.statusCode == 200 else {
+            let errorMessage: String
+            if let errorBody = String(data: data, encoding: .utf8) {
+                errorMessage = "GitHub API returned status \(httpResponse.statusCode): \(errorBody)"
+            } else {
+                errorMessage = "GitHub API returned status \(httpResponse.statusCode)"
+            }
+            throw GitHubError.commandFailed(errorMessage)
+        }
+
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw GitHubError.commandFailed("Failed to parse JSON response from GitHub API")
+        }
+
+        guard let username = json["login"] as? String else {
+            throw GitHubError.commandFailed("GitHub API response missing 'login' field")
         }
 
         return username

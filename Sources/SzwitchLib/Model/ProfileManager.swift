@@ -1,16 +1,25 @@
 import Foundation
 import SwiftUI
+import os.log
 
+/// Manages git profiles for switching between multiple GitHub accounts.
+///
+/// ProfileManager handles storing profiles, switching between them, and keeping track
+/// of the currently active profile. It polls the system git configuration to detect
+/// external changes and automatically imports new profiles.
 @MainActor
 public class ProfileManager: ObservableObject {
+    private let logger = Logger(subsystem: "com.szwitch", category: "ProfileManager")
     @Published public var profiles: [GitProfile] = []
     @Published public var activeProfileId: UUID?
     @Published public var currentSystemName: String?
     @Published public var currentSystemEmail: String?
-    
+    @Published public var lastError: String?
+
     private let profilesKey = "SavedGitProfiles"
     private let activeProfileKey = "ActiveGitProfileId"
     private var pollingTimer: Timer?
+    private let pollingInterval: TimeInterval = 5.0
     
     private let gitService: GitService
     private let githubService: GitHubServiceProtocol
@@ -27,20 +36,24 @@ public class ProfileManager: ObservableObject {
     private func startPolling() {
         // Check immediately
         Task { await checkAndImportCurrentState() }
-        
-        // Poll every 5 seconds to detect external changes (e.g. via terminal)
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+
+        // Poll periodically to detect external changes (e.g. via terminal)
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: pollingInterval, repeats: true) { [weak self] _ in
             Task { [weak self] in
                 await self?.checkAndImportCurrentState()
             }
         }
     }
     
+    /// Adds a new profile to the list of managed profiles.
+    /// - Parameter profile: The profile to add
     public func addProfile(_ profile: GitProfile) {
         profiles.append(profile)
         saveProfiles()
     }
-    
+
+    /// Removes a profile by its ID.
+    /// - Parameter id: The UUID of the profile to remove
     public func removeProfile(id: UUID) {
         profiles.removeAll { $0.id == id }
         if activeProfileId == id {
@@ -48,29 +61,38 @@ public class ProfileManager: ObservableObject {
         }
         saveProfiles()
     }
-    
+
+    /// Updates an existing profile with new values.
+    /// - Parameter updatedProfile: The updated profile data
+    /// - Note: If the profile is currently active, the git configuration will be updated immediately
     public func updateProfile(_ updatedProfile: GitProfile) {
         if let index = profiles.firstIndex(where: { $0.id == updatedProfile.id }) {
             profiles[index] = updatedProfile
             saveProfiles()
-            
+
             // If this is the active profile, update git config
             if activeProfileId == updatedProfile.id {
                 switchProfile(to: updatedProfile)
             }
         }
     }
-    
+
+    /// Switches to a different profile, updating both git config and GitHub CLI authentication.
+    /// - Parameter profile: The profile to switch to
+    /// - Note: This operation is asynchronous and errors will be reported via the `lastError` property
     public func switchProfile(to profile: GitProfile) {
+        // Clear any previous errors
+        lastError = nil
+
         // Set active profile immediately
         activeProfileId = profile.id
         userDefaults.set(profile.id.uuidString, forKey: activeProfileKey)
-        
+
         Task {
             do {
                 // 1. Git Config - Set user name and email
                 try await gitService.setGlobalConfig(name: profile.name, email: profile.email)
-                print("✓ Set git config for \(profile.name)")
+                logger.info("Set git config for \(profile.name)")
                 
                 // 2. GitHub CLI Authentication - This is the primary method
                 if !profile.token.isEmpty {
@@ -78,14 +100,14 @@ public class ProfileManager: ObservableObject {
                         do {
                             // Switch to this account using gh CLI
                             try await githubService.switchAccount(token: profile.token, hostname: "github.com")
-                            print("✓ Authenticated with gh CLI for \(profile.name)")
+                            logger.info("Authenticated with gh CLI for \(profile.name)")
                         } catch {
-                            print("✗ Failed to authenticate with gh CLI: \(error)")
+                            logger.error("Failed to authenticate with gh CLI: \(error.localizedDescription)")
                             // This is critical - notify user
                             throw error
                         }
                     } else {
-                        print("✗ GitHub CLI not installed - account switching will not work!")
+                        logger.error("GitHub CLI not installed - account switching will not work!")
                         throw GitHubError.notInstalled
                     }
                 }
@@ -103,18 +125,25 @@ public class ProfileManager: ObservableObject {
                             profiles[index] = updatedProfile
                             saveProfiles()
                         }
-                        print("✓ Fetched GitHub user info: \(username)")
+                        logger.info("Fetched GitHub user info: \(username)")
                     } catch {
-                        print("⚠ Failed to fetch GitHub username: \(error)")
+                        logger.warning("Failed to fetch GitHub username: \(error.localizedDescription)")
                         // Continue anyway - we'll use what we have
                     }
                 }
-                
-                print("✓ Successfully switched to \(updatedProfile.name)")
-                print("  You can now use git push/pull and all GitHub operations as \(updatedProfile.name)")
+
+                logger.info("Successfully switched to \(updatedProfile.name)")
+                logger.debug("Git operations are now authenticated as \(updatedProfile.name)")
             } catch {
-                print("✗ Failed to switch profile: \(error)")
-                // TODO: Show user-facing error message
+                logger.error("Failed to switch profile: \(error.localizedDescription)")
+                // Set user-facing error message
+                await MainActor.run {
+                    if let githubError = error as? GitHubError {
+                        lastError = githubError.localizedDescription
+                    } else {
+                        lastError = "Failed to switch profile: \(error.localizedDescription)"
+                    }
+                }
             }
         }
     }
@@ -139,32 +168,32 @@ public class ProfileManager: ObservableObject {
     
     public func checkAndImportCurrentState() async {
         let (name, email) = await gitService.getCurrentConfig()
-        
+
         // Update published state for UI
         self.currentSystemName = name
         self.currentSystemEmail = email
-        
-        print("Checking system state: Name=\(name ?? "nil"), Email=\(email ?? "nil")")
-        
+
+        logger.debug("Checking system state: Name=\(name ?? "nil"), Email=\(email ?? "nil")")
+
         guard let currentEmail = email, !currentEmail.isEmpty else {
-            print("No global email found.")
+            logger.debug("No global email found.")
             // If we have profiles, we might want to unset activeProfileId if it doesn't match?
             // But let's leave it alone to avoid flickering.
             return
         }
-        
+
         // Check if it matches an existing profile
         if let match = profiles.first(where: { $0.email == currentEmail }) {
-            print("Matched existing profile: \(match.name)")
+            logger.debug("Matched existing profile: \(match.name)")
             if activeProfileId != match.id {
                 activeProfileId = match.id
                 userDefaults.set(match.id.uuidString, forKey: activeProfileKey)
             }
             return
         }
-        
+
         // Import new profile
-        print("No match found. Importing new profile for \(currentEmail).")
+        logger.info("No match found. Importing new profile for \(currentEmail).")
         
         var token = ""
         // Try to read token from Keychain
@@ -185,6 +214,6 @@ public class ProfileManager: ObservableObject {
         addProfile(newProfile)
         activeProfileId = newProfile.id
         userDefaults.set(newProfile.id.uuidString, forKey: activeProfileKey)
-        print("Imported and activated: \(newProfile.name)")
+        logger.info("Imported and activated: \(newProfile.name)")
     }
 }

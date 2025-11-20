@@ -113,21 +113,28 @@ public final class RealKeychainBackend: KeychainBackend {
 
 public final class KeychainHelper: Sendable {
     public static let shared = KeychainHelper()
-    
-    // Allow swapping backend for testing
-    // Using a lock or actor would be better for thread safety if this changes at runtime often,
-    // but for testing injection it's usually acceptable.
-    // Since this is a singleton used from MainActor often, but defined as Sendable,
-    // we should make this thread-safe or just UnsafeMutable for tests.
-    // For simplicity in this context, we'll use a property that can be set.
-    // To be strictly Sendable, we wrap it.
-    
+
+    // Thread-safe backend storage using NSLock
     private let backendContainer = BackendContainer()
-    
+
     private final class BackendContainer: @unchecked Sendable {
-        var backend: any KeychainBackend = RealKeychainBackend()
+        private let lock = NSLock()
+        private var _backend: any KeychainBackend = RealKeychainBackend()
+
+        var backend: any KeychainBackend {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return _backend
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                _backend = newValue
+            }
+        }
     }
-    
+
     public var backend: any KeychainBackend {
         get { backendContainer.backend }
         set { backendContainer.backend = newValue }

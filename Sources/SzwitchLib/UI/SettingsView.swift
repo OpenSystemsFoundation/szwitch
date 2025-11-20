@@ -26,6 +26,13 @@ public struct SettingsView: View {
         .sheet(item: $editingProfile) { profile in
             EditProfileView(profile: profile)
         }
+        .alert("Error Switching Profile", isPresented: .constant(profileManager.lastError != nil), presenting: profileManager.lastError) { _ in
+            Button("OK") {
+                profileManager.lastError = nil
+            }
+        } message: { error in
+            Text(error)
+        }
     }
 
     var profilesTab: some View {
