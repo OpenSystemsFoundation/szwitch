@@ -36,7 +36,10 @@ jobs:
           echo "Generated version: $VERSION"
 
       - name: Generate icons
-        run: swift scripts/create_icon.swift
+        run: |
+          swift scripts/create_icon.swift
+          iconutil -c icns AppIcon.iconset -o AppIcon.icns
+          echo "✓ AppIcon.icns created"
 
       - name: Build app
         run: ./scripts/build_app.sh
